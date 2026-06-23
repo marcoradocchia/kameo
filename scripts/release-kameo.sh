@@ -51,7 +51,7 @@ if [ "$BRANCH" != "main" ]; then
   exit 1
 fi
 
-execute_step "Updating changelog" "git cliff --tag \"$NEW_VERSION\" --ignore-tags \"\w-\" --prepend ./CHANGELOG.md --latest"
+execute_step "Updating changelog" "git cliff --tag \"$NEW_VERSION\" --ignore-tags \"\w-\" --prepend ./CHANGELOG.md --unreleased"
 
 execute_step "Updating Cargo.toml package version to $NEW_VERSION" "perl -i -pe \"s/^version = \\\".*\\\"/version = \\\"$NEW_VERSION\\\"/\" ./Cargo.toml"
 
@@ -59,11 +59,15 @@ execute_step "Updating Cargo.toml workspace dependency version to $NEW_VERSION" 
 
 execute_step "Updating README.md version to $MAJOR_MINOR_VERSION" "perl -i -pe 's/kameo = \"[^\"]*\"/kameo = \"$MAJOR_MINOR_VERSION\"/' README.md"
 
+execute_step "Updating README.md console version to $MAJOR_MINOR_VERSION" "perl -i -pe 's/kameo = \{ version = \"[^\"]*\", features = \[\"console\"\] \}/kameo = { version = \"$MAJOR_MINOR_VERSION\", features = [\"console\"] }/' README.md"
+
+execute_step "Updating console/README.md version to $MAJOR_MINOR_VERSION" "perl -i -pe 's/kameo = \{ version = \"[^\"]*\", features = \[\"console\"\] \}/kameo = { version = \"$MAJOR_MINOR_VERSION\", features = [\"console\"] }/' console/README.md"
+
 execute_step "Updating getting-started.mdx version to $MAJOR_MINOR_VERSION" "perl -i -pe 's/kameo = \"[^\"]*\"/kameo = \"$MAJOR_MINOR_VERSION\"/' ./docs/getting-started.mdx"
 
 execute_step "Publishing kameo version $NEW_VERSION" "cargo publish -p kameo --allow-dirty"
 
-execute_step "Creating bump git commit" "git add Cargo.toml CHANGELOG.md README.md docs/getting-started.mdx && git commit -m \"chore: bump kameo to version $NEW_VERSION\""
+execute_step "Creating bump git commit" "git add Cargo.toml CHANGELOG.md README.md console/README.md docs/getting-started.mdx && git commit -m \"chore: bump kameo to version $NEW_VERSION\""
 
 execute_step "Pushing changes to remote" "git push origin main"
 
@@ -71,7 +75,7 @@ execute_step "Creating git tag v$NEW_VERSION" "git tag -a \"v$NEW_VERSION\" -m \
 
 execute_step "Pushing tag to remote" "git push origin \"v$NEW_VERSION\""
 
-execute_step "Creating CHANGELOG-Release.md for release notes" "git cliff --tag \"$NEW_VERSION\" --output ./CHANGELOG-Release.md --current"
+execute_step "Creating CHANGELOG-Release.md for release notes" "awk -v ver=\"$NEW_VERSION\" 'index(\$0, \"## [\" ver \"]\")==1 {f=1; print; next} f && index(\$0,\"## [\")==1 {exit} f' CHANGELOG.md > ./CHANGELOG-Release.md"
 
 # Extract the release date from the CHANGELOG-Release.md file
 RELEASE_DATE=$(grep '^## \['"$NEW_VERSION"'\] - ' CHANGELOG-Release.md | sed -E 's/.* - ([0-9]{4}-[0-9]{2}-[0-9]{2})$/\1/')
